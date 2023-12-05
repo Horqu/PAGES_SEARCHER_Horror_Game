@@ -1,3 +1,4 @@
+#include <GL/glew.h>
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 
@@ -11,6 +12,12 @@ int main() {
 
     sf::RenderWindow window(fullScreenMode, "PAGES SEARCHER", sf::Style::Fullscreen);
     window.setVerticalSyncEnabled(true);
+
+    glewExperimental = GL_TRUE;
+    GLenum err = glewInit();
+    if (err != GLEW_OK) {
+        // TODO handle exception
+    }
 
     std::unique_ptr<GameState> currentState;
     currentState = std::make_unique<MenuState>(currentState, window);

@@ -72,6 +72,10 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>C:\Users\pawel\Downloads\glew-2.1.0-win32\glew-2.1.0\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\pawel\Downloads\glew-2.1.0-win32\glew-2.1.0\lib\Release\x64;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -110,6 +114,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);C:\Users\pawel\Downloads\glew-2.1.0-win32\glew-2.1.0\lib\Release\x64\glew32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -148,7 +153,16 @@
     <Font Include="Welatte_Brush_Swash.ttf" />
   </ItemGroup>
   <ItemGroup>
+    <Media Include="demonic-woman-scream-6333.mp3" />
+    <Media Include="hearbeat-71701.mp3" />
+    <Media Include="heavy-breathing-14431.mp3" />
+    <Media Include="loud-silence-75803.mp3" />
+    <Media Include="mask-breathing-for-killer-or-other-63789.mp3" />
     <Media Include="rain-and-thunder-16705.mp3" />
+    <Media Include="step_sound.mp3" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="floor_texture.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
