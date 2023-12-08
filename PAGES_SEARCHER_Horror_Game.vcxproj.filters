@@ -75,9 +75,15 @@
     <Media Include="mask-breathing-for-killer-or-other-63789.mp3">
       <Filter>Resource Files</Filter>
     </Media>
+    <Media Include="item-equip-6904.mp3">
+      <Filter>Resource Files</Filter>
+    </Media>
   </ItemGroup>
   <ItemGroup>
     <Image Include="floor_texture.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="floor_texture_with_page.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

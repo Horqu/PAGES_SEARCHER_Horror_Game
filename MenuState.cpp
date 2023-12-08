@@ -62,6 +62,8 @@ void MenuState::update(sf::RenderWindow& window) {
 
 void MenuState::render(sf::RenderWindow& window) {
 
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
     for (const auto& item : menuItems) {
         window.draw(item);
     }

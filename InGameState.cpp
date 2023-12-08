@@ -1,7 +1,6 @@
-#define _USE_MATH_DEFINES
-
 #include <GL/glew.h>
 #include <GL/glu.h>
+#include <GL/glut.h>
 #include <SFML/OpenGL.hpp>
 #include <cmath>
 
@@ -9,40 +8,52 @@
 
 #pragma comment(lib, "glu32.lib")
 
+GLuint VBO, VAO;
+
 GLuint floorVBO;
 GLuint wallVBO;
-GLuint textureID;
 sf::Image image;
 
-void loadFloorTexture() {
-    if (!image.loadFromFile("floor_texture.png")) {
+GLuint loadTextureFromImage(const std::string& filename) {
+    sf::Image image;
+    if (!image.loadFromFile(filename)) {
         // TODO handle exception
     }
 
+    
+    image.flipVertically();
+    GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.getSize().x, image.getSize().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.getPixelsPtr());
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
+    
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+    GLfloat maxAnisotropy;
+    glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAnisotropy);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisotropy);
 
-    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.getSize().x, image.getSize().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.getPixelsPtr());
+
+    
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    return textureID;
 }
 
 InGameState::InGameState(std::unique_ptr<GameState>& currentState, sf::RenderWindow& window) : currentState(currentState) {
 
     collectedPages = 0;
-    cameraPosX = 0.0f;
-    cameraPosY = 3.0f;
-    cameraPosZ = 3.0f;
+    cameraPosX = 3.0f;
+    cameraPosY = 1.0f;
+    cameraPosZ = 5.0f;
     cameraLookAtX = 0.0f;
-    cameraLookAtY = 3.0f;
-    cameraLookAtZ = .0f;
+    cameraLookAtY = 0.0f;
+    cameraLookAtZ = 0.0f;
     cameraUpX = 0.0f;
     cameraUpY = 0.1f;
     cameraUpZ = 0.0f;
@@ -51,6 +62,11 @@ InGameState::InGameState(std::unique_ptr<GameState>& currentState, sf::RenderWin
     rotationSpeed = 1.0f;
 
     cameraAngle = 0.0f;
+
+    floorTextureID = loadTextureFromImage("floor_texture.png");
+    pageTextureID = loadTextureFromImage("floor_texture_with_page.png");
+
+    endGameTimer = clock.getElapsedTime();
 
     if (!heartBeatSound.openFromFile("hearbeat-71701.mp3")) {
         // TODO handle exception
@@ -76,44 +92,54 @@ InGameState::InGameState(std::unique_ptr<GameState>& currentState, sf::RenderWin
         // TODO handle exception
     }
 
+    if (!pagePickUpSound.openFromFile("item-equip-6904.mp3")) {
+        // TODO handle exception
+    }
+
     //heartBeatSound.play();
 
-    initFloor();
-    loadFloorTexture();
+    //window.clear(sf::Color::White);
 
-    initWall();
+    window.setActive(true);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Kolor t³a
+
+    //initCamera(window);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 void InGameState::initFloor() {
-    // Przyk³adowe dane wierzcho³ków dla prostok¹ta
+    
     GLfloat floorVertices[] = {
-        // Wierzcho³ki         // Kolory        // Tekstura
-        -50.0f, 0.0f, 50.0f,     0.5f, 0.5f, 1.0f, 0.0f, 0.0f, // Lewy górny
-         50.0f, 0.0f, 50.0f,     0.5f, 0.5f, 1.0f, 100.0f, 0.0f, // Prawy górny
-         50.0f, 0.0f, -50.0f,    0.5f, 0.5f, 1.0f, 100.0f, 100.0f, // Prawy dolny
-        -50.0f, 0.0f, -50.0f,    0.5f, 0.5f, 1.0f, 0.0f, 100.0f  // Lewy dolny
+        
+        -50.0f, 0.0f, 50.0f,     0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 
+         50.0f, 0.0f, 50.0f,     0.5f, 0.5f, 1.0f, 100.0f, 0.0f, 
+         50.0f, 0.0f, -50.0f,    0.5f, 0.5f, 1.0f, 100.0f, 100.0f, 
+        -50.0f, 0.0f, -50.0f,    0.5f, 0.5f, 1.0f, 0.0f, 100.0f  
     };
 
-    // Generowanie i wi¹zanie VBO
+    
     glGenBuffers(1, &floorVBO);
     glBindBuffer(GL_ARRAY_BUFFER, floorVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(floorVertices), floorVertices, GL_STATIC_DRAW);
 
-    // W³¹czenie atrybutów wierzcho³ków (jeœli u¿ywasz)
-    // glVertexPointer, glColorPointer itp.
+
 }
 
 void InGameState::initWall() {
-    // Przyk³adowe dane wierzcho³ków dla pionowego prostok¹ta (œciany)
+    
     GLfloat wallVertices[] = {
-        // Wierzcho³ki
-        -50.0f, 0.0f, 50.0f,     // Lewy dolny
-        -50.0f, 100.0f, 50.0f,    // Lewy górny
-         50.0f, 100.0f, 50.0f,    // Prawy górny
-         50.0f, 0.0f, 50.0f      // Prawy dolny
+        
+        -50.0f, 0.0f, 50.0f,  
+        -50.0f, 100.0f, 50.0f, 
+         50.0f, 100.0f, 50.0f, 
+         50.0f, 0.0f, 50.0f 
     };
 
-    // Generowanie i wi¹zanie VBO dla œciany
     glGenBuffers(1, &wallVBO);
     glBindBuffer(GL_ARRAY_BUFFER, wallVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(wallVertices), wallVertices, GL_STATIC_DRAW);
@@ -121,46 +147,66 @@ void InGameState::initWall() {
 
 
 void InGameState::initCamera(sf::RenderWindow& window) {
-    // Ustawienie macierzy projekcji
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluPerspective(45.0f, (GLfloat)window.getSize().x / (GLfloat)window.getSize().y, 0.1f, 100.0f);
 
-    // Prze³¹czenie na model/widok
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 }
 
 void InGameState::updateCamera() {
+    glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
+    gluPerspective(45.0, 1920 / 1080, 1.0, 100.0);
 
     GLfloat lookAtX = cameraPosX + cos(cameraAngle);
     GLfloat lookAtZ = cameraPosZ + sin(cameraAngle);
 
-    gluLookAt(cameraPosX, cameraPosY, cameraPosZ,  // Pozycja kamery
-        lookAtX, cameraPosY, lookAtZ,        // Punkt, na który kamera jest skierowana
-        0.0f, 1.0f, 0.0f);                  // Wektor "góra"
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    gluLookAt(cameraPosX, cameraPosY, cameraPosZ,  
+        lookAtX, cameraPosY, lookAtZ,       
+        0.0f, 1.0f, 0.0f);
 }
 
 
 void InGameState::handleInput(sf::RenderWindow& window) {
-    const GLfloat moveSpeed = 0.1f; // Prêdkoœæ ruchu
-    const GLfloat rotationSpeed = 0.03f; // Prêdkoœæ obrotu (w radianach)
+    const GLfloat moveSpeed = 0.1f; 
+    const GLfloat rotationSpeed = 0.03f; 
 
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
-        cameraAngle -= rotationSpeed; // Obrót w lewo
+        cameraAngle -= rotationSpeed; 
     }
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
-        cameraAngle += rotationSpeed; // Obrót w prawo
+        cameraAngle += rotationSpeed; 
     }
 
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
-        cameraPosX += cos(cameraAngle) * moveSpeed; // Ruch do przodu
-        cameraPosZ += sin(cameraAngle) * moveSpeed;
+
+        int newCameraPosXCeil = ceil(cameraPosX + cos(cameraAngle) * moveSpeed);
+        int newCameraPosZCeil = ceil(cameraPosZ + sin(cameraAngle) * moveSpeed);
+        int newCameraPosXFloor = floor(cameraPosX + cos(cameraAngle) * moveSpeed);
+        int newCameraPosZFloor = floor(cameraPosZ + sin(cameraAngle) * moveSpeed);
+        
+        if (map[newCameraPosXCeil][newCameraPosZCeil] != 1 && map[newCameraPosXFloor][newCameraPosZFloor] != 1) {
+            cameraPosX += cos(cameraAngle) * moveSpeed;
+            cameraPosZ += sin(cameraAngle) * moveSpeed;
+        }
+
     }
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
-        cameraPosX -= cos(cameraAngle) * moveSpeed; // Ruch do ty³u
-        cameraPosZ -= sin(cameraAngle) * moveSpeed;
+
+        int newCameraPosXCeil = ceil(cameraPosX - cos(cameraAngle) * moveSpeed);
+        int newCameraPosZCeil = ceil(cameraPosZ - sin(cameraAngle) * moveSpeed);
+        int newCameraPosXFloor = floor(cameraPosX - cos(cameraAngle) * moveSpeed);
+        int newCameraPosZFloor = floor(cameraPosZ - sin(cameraAngle) * moveSpeed);
+
+        if (map[newCameraPosXCeil][newCameraPosZCeil] != 1 && map[newCameraPosXFloor][newCameraPosZFloor] != 1) {
+            cameraPosX -= cos(cameraAngle) * moveSpeed;
+            cameraPosZ -= sin(cameraAngle) * moveSpeed;
+        }
 
     }
 
@@ -168,36 +214,114 @@ void InGameState::handleInput(sf::RenderWindow& window) {
 
 void InGameState::update(sf::RenderWindow& window) {
 
+    if (map[static_cast<int>(cameraPosX)][static_cast<int>(cameraPosZ)] == 2) {
+
+        ++collectedPages;
+        newPage = true;
+        map[static_cast<int>(cameraPosX)][static_cast<int>(cameraPosZ)] = 0;
+        pagePickUpSound.play();
+        if (collectedPages == 4) {
+            clock.restart();
+        }
+    }
+
+    endGameTimer = clock.getElapsedTime();
+    if (collectedPages == 4 && endGameTimer.asSeconds() > 5) {
+        window.close();
+    }
 
 }
 
-void InGameState::render(sf::RenderWindow& window) {
-    window.setActive(true);
-
-    glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    initCamera(window);
-    updateCamera();
+void InGameState::renderFloor(int x, int y) {
 
     glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, textureID); // Za³ó¿my, ¿e to jest tekstura pod³ogi
-    // Rysowanie pod³ogi
-    glBindBuffer(GL_ARRAY_BUFFER, floorVBO);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(3, GL_FLOAT, 8 * sizeof(GLfloat), (void*)0);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glTexCoordPointer(2, GL_FLOAT, 8 * sizeof(GLfloat), (void*)(6 * sizeof(GLfloat)));
-    glDrawArrays(GL_QUADS, 0, 4); // lub GL_TRIANGLES
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
-    // Wy³¹czenie teksturowania
-    glBindTexture(GL_TEXTURE_2D, 0);
+    switch (map[x][y]) {
+    case 0:
+        glBindTexture(GL_TEXTURE_2D, floorTextureID);
+        glBegin(GL_QUADS);
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(.0f + static_cast<float>(x), 0.0f, .0f + static_cast<float>(y)); // Dolny lewy
+        glTexCoord2f(256.0f, 0.0f); glVertex3f(.0f + static_cast<float>(x), 0.0f, 1.0f + static_cast<float>(y)); // Dolny prawy
+        glTexCoord2f(256.0f, 256.0f); glVertex3f(1.0f + static_cast<float>(x), 0.0f, 1.0f + static_cast<float>(y)); // Gorny prawy
+        glTexCoord2f(0.0f, 256.0f); glVertex3f(1.0f + static_cast<float>(x), 0.0f, .0f + static_cast<float>(y)); // Gorny lewy
+        glEnd();
+        break;
+    case 2:
+        glBindTexture(GL_TEXTURE_2D, pageTextureID);
+        glBegin(GL_QUADS);
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(.0f + static_cast<float>(x), 0.0f, .0f + static_cast<float>(y)); // Dolny lewy
+        glTexCoord2f(256.0f, 0.0f); glVertex3f(.0f + static_cast<float>(x), 0.0f, 1.0f + static_cast<float>(y)); // Dolny prawy
+        glTexCoord2f(256.0f, 256.0f); glVertex3f(1.0f + static_cast<float>(x), 0.0f, 1.0f + static_cast<float>(y)); // Gorny prawy
+        glTexCoord2f(0.0f, 256.0f); glVertex3f(1.0f + static_cast<float>(x), 0.0f, .0f + static_cast<float>(y)); // Gorny lewy
+        glEnd();
+
+      /*  collectedPages++;
+        newPage = true;
+        map[x][y] = 0;*/
+
+        break;
+    default:
+        break;
+
+
+
+
+    }
+
     glDisable(GL_TEXTURE_2D);
+}
 
-    // Od³¹czenie VBO
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+void InGameState::renderWall(int x, int y) {
+
+    glEnable(GL_TEXTURE_2D);
+
+    if (map[x][y] == 1) {
+
+        glBindTexture(GL_TEXTURE_2D, floorTextureID);
+        glBegin(GL_QUADS);
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(.0f + static_cast<float>(x), 0.0f, 1.0f + static_cast<float>(y)); 
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(1.0f + static_cast<float>(x), 0.0f, 1.0f + static_cast<float>(y)); 
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(1.0f + static_cast<float>(x), 10.0f, 1.0f + static_cast<float>(y)); 
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(.0f + static_cast<float>(x), 10.0f, 1.0f + static_cast<float>(y)); 
+
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(.0f + static_cast<float>(x), 0.0f, .0f + static_cast<float>(y)); 
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(.0f + static_cast<float>(x), 10.0f, .0f + static_cast<float>(y)); 
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(1.0f + static_cast<float>(x), 10.0f, .0f + static_cast<float>(y)); 
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(1.0f + static_cast<float>(x), 0.0f, .0f + static_cast<float>(y)); 
+
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(.0f + static_cast<float>(x), 0.0f, .0f + static_cast<float>(y)); 
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(.0f + static_cast<float>(x), 0.0f, 1.0f + static_cast<float>(y)); 
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(.0f + static_cast<float>(x), 10.0f, 1.0f + static_cast<float>(y)); 
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(.0f + static_cast<float>(x), 10.0f, .0f + static_cast<float>(y)); 
+
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(1.0f + static_cast<float>(x), 0.0f, .0f + static_cast<float>(y)); 
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(1.0f + static_cast<float>(x), 10.0f, .0f + static_cast<float>(y)); 
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(1.0f + static_cast<float>(x), 10.0f, 1.0f + static_cast<float>(y)); 
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(1.0f + static_cast<float>(x), 0.0f, 1.0f + static_cast<float>(y));
+        glEnd();
+    }
+
+    glDisable(GL_TEXTURE_2D);
+}
+
+void InGameState::render(sf::RenderWindow& window) {
+
+    updateCamera();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    for (int i = 0; i < 25; ++i) {
+        for (int j = 0; j < 25; ++j) {
+            renderFloor(i, j);
+        }
+    }
+
+    for (int i = 0; i < 25; ++i) {
+        for (int j = 0; j < 25; ++j) {
+            renderWall(i, j);
+        }
+    }
+
+    glFlush();
 }
 
 

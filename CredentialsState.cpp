@@ -1,5 +1,6 @@
 #include "CredentialsState.h"
 #include "MenuState.h"
+#include "InGameState.h"
 
 CredentialsState::CredentialsState(std::unique_ptr<GameState>& currentState, sf::RenderWindow& window) : currentState(currentState) {
 
@@ -57,6 +58,8 @@ void CredentialsState::update(sf::RenderWindow& window) {
 
 void CredentialsState::render(sf::RenderWindow& window) {
 
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
     for (const auto& item : menuItems) {
         window.draw(item);
     }

@@ -73,8 +73,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Users\pawel\Downloads\glew-2.1.0-win32\glew-2.1.0\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\pawel\Downloads\glew-2.1.0-win32\glew-2.1.0\lib\Release\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\pawel\Downloads\glew-2.1.0-win32\glew-2.1.0\include;$(IncludePath);C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Include</IncludePath>
+    <LibraryPath>C:\Users\pawel\Downloads\glew-2.1.0-win32\glew-2.1.0\lib\Release\x64;C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -114,7 +114,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);C:\Users\pawel\Downloads\glew-2.1.0-win32\glew-2.1.0\lib\Release\x64\glew32.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);C:\Users\pawel\Downloads\glew-2.1.0-win32\glew-2.1.0\lib\Release\x64\glew32.lib;C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Lib\freeglut.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -156,6 +156,7 @@
     <Media Include="demonic-woman-scream-6333.mp3" />
     <Media Include="hearbeat-71701.mp3" />
     <Media Include="heavy-breathing-14431.mp3" />
+    <Media Include="item-equip-6904.mp3" />
     <Media Include="loud-silence-75803.mp3" />
     <Media Include="mask-breathing-for-killer-or-other-63789.mp3" />
     <Media Include="rain-and-thunder-16705.mp3" />
@@ -163,6 +164,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="floor_texture.png" />
+    <Image Include="floor_texture_with_page.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
